@@ -1,0 +1,8 @@
+{
+  "name": "leetcode-practice",
+  "version": "1.0.0",
+  "description": "LeetCode practice platform with in-browser Python execution",
+  "scripts": {
+    "dev": "vercel dev"
+  }
+}
