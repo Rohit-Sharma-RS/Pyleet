@@ -14,6 +14,7 @@ let originalCode = "";
 document.addEventListener("DOMContentLoaded", () => {
   initEditor();
   loadPyodide();
+  initAuth(); // Initialize Firebase Auth (loads cloud data & updates history)
   loadHistory();
 
   // Handle Enter key on URL input
@@ -809,6 +810,7 @@ function saveToHistory(allPassed, passCount, totalTests) {
   }
 
   localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  debouncedSync(); // Sync to cloud
   loadHistory();
 }
 
@@ -1098,6 +1100,7 @@ function toggleHistory() {
 function clearHistory() {
   if (confirm("Clear all problem history? This cannot be undone.")) {
     localStorage.removeItem(HISTORY_KEY);
+    debouncedSync(); // Sync empty history to cloud
     loadHistory();
   }
 }
@@ -1109,6 +1112,7 @@ function toggleFavorite(slug) {
   if (!item) return;
   item.favorite = !item.favorite;
   localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  debouncedSync(); // Sync to cloud
   loadHistory();
 }
 
@@ -1145,6 +1149,7 @@ function redoFromHistory(slug) {
     item.status = "attempted";
     item.passCount = 0;
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    debouncedSync(); // Sync to cloud
   }
 
   // Load the problem fresh
