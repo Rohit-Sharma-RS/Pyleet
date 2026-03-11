@@ -50,12 +50,37 @@
           <span class="logo-text">Py<span class="logo-accent">Leet</span></span>
         </div>
         <div class="header-right">
-          <button class="history-toggle" id="historyToggle" onclick="toggleHistory()" title="Problem History">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+          <button
+            class="history-toggle"
+            id="historyToggle"
+            onclick="toggleHistory()"
+            title="Problem History"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              width="18"
+              height="18"
+            >
               <circle cx="12" cy="12" r="10"></circle>
               <polyline points="12 6 12 12 16 14"></polyline>
             </svg>
             <span class="history-count" id="historyCount">0</span>
+          </button>
+          <button
+            class="favorites-toggle"
+            id="favoritesToggle"
+            onclick="openFavorites()"
+            title="Favorite Problems"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+              <polygon
+                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+              ></polygon>
+            </svg>
+            <span class="favorites-count" id="favoritesCount">0</span>
           </button>
           <div class="pyodide-status" id="pyodideStatus">
             <span class="status-dot loading"></span>
@@ -225,7 +250,11 @@
     </main>
 
     <!-- History Sidebar -->
-    <div class="history-overlay" id="historyOverlay" onclick="toggleHistory()"></div>
+    <div
+      class="history-overlay"
+      id="historyOverlay"
+      onclick="toggleHistory()"
+    ></div>
     <aside class="history-sidebar" id="historySidebar">
       <div class="history-header">
         <h2 class="history-title">📋 Problem History</h2>
@@ -235,11 +264,16 @@
       <div class="history-list" id="historyList">
         <div class="empty-state">
           <div class="empty-state-icon">📝</div>
-          <p class="empty-state-text">No problems practiced yet.<br>Fetch a problem and run your solution!</p>
+          <p class="empty-state-text">
+            No problems practiced yet.<br />Fetch a problem and run your
+            solution!
+          </p>
         </div>
       </div>
       <div class="history-footer">
-        <button class="clear-history-btn" onclick="clearHistory()">Clear All History</button>
+        <button class="clear-history-btn" onclick="clearHistory()">
+          Clear All History
+        </button>
       </div>
     </aside>
 
