@@ -166,6 +166,13 @@
             </svg>
             <span>Fetch</span>
           </button>
+          <button id="customBtn" class="custom-btn" onclick="openCustomModal()" title="Create a custom problem">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>Custom</span>
+          </button>
         </div>
         <div class="url-error" id="urlError"></div>
       </div>
@@ -211,6 +218,15 @@
               <div id="problemDescription" class="problem-description"></div>
             </div>
             <div id="testcasesTab" class="tab-content">
+              <div class="test-cases-toolbar">
+                <button class="add-testcase-btn" onclick="addNewTestCase()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  Add Test Case
+                </button>
+              </div>
               <div id="testCasesList" class="test-cases-list"></div>
             </div>
           </div>
@@ -320,6 +336,46 @@
           <p class="auth-toggle-text" id="authToggleText">
             Don't have an account? <a href="#" onclick="openAuthModal('signup'); return false;">Sign up</a>
           </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Custom Problem Modal -->
+    <div class="auth-modal-overlay" id="customProblemModal">
+      <div class="auth-modal">
+        <button class="auth-modal-close" onclick="closeCustomModal()">✕</button>
+        <h2 class="auth-modal-title">Create Custom Problem</h2>
+        <p class="auth-modal-subtitle">Configure your own problem and test cases</p>
+        <div class="auth-modal-form">
+          <div class="auth-input-group">
+            <label for="customTitle">Problem Title</label>
+            <input
+              type="text"
+              id="customTitle"
+              placeholder="e.g., Two Sum Custom"
+              onkeydown="if(event.key === 'Enter') document.getElementById('customMethod').focus()"
+            />
+          </div>
+          <div class="auth-input-group">
+            <label for="customMethod">Method Name</label>
+            <input
+              type="text"
+              id="customMethod"
+              placeholder="e.g., solve"
+              onkeydown="if(event.key === 'Enter') document.getElementById('customParams').focus()"
+            />
+          </div>
+          <div class="auth-input-group">
+            <label for="customParams">Parameters (comma-separated)</label>
+            <input
+              type="text"
+              id="customParams"
+              placeholder="e.g., nums, target"
+              onkeydown="if(event.key === 'Enter') submitCustomProblem()"
+            />
+          </div>
+          <div class="auth-error" id="customError"></div>
+          <button class="auth-submit-btn" onclick="submitCustomProblem()">Create Problem</button>
         </div>
       </div>
     </div>

@@ -310,7 +310,7 @@ function renderTestCases() {
     container.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon">📋</div>
-                <p class="empty-state-text">No test cases could be parsed for this problem.</p>
+                <p class="empty-state-text">No test cases available. Click "Add Test Case" to create one.</p>
             </div>`;
     return;
   }
@@ -319,27 +319,24 @@ function renderTestCases() {
     .map(
       (tc, i) => `
         <div class="test-case-card">
-            <div class="test-case-header">Test Case ${i + 1}</div>
+            <div class="test-case-header-row">
+                <div class="test-case-header">Test Case ${i + 1}</div>
+                <button class="test-case-delete-btn" onclick="removeTestCase(${i})">✕ Remove</button>
+            </div>
             ${Object.entries(tc.inputs)
               .map(
                 ([key, val]) => `
-                <div class="test-case-row">
-                    <span class="test-case-label">${key}:</span>
-                    <span class="test-case-value">${escapeHtml(val)}</span>
+                <div class="test-case-row" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+                    <span class="test-case-label" style="font-size: 0.8rem;">${key}:</span>
+                    <textarea class="test-case-input" onchange="updateTestCase(${i}, 'input', '${key}', this.value)">${escapeHtml(val)}</textarea>
                 </div>
             `,
               )
               .join("")}
-            ${
-              tc.expected
-                ? `
-                <div class="test-case-row">
-                    <span class="test-case-label">Expected:</span>
-                    <span class="test-case-value">${escapeHtml(tc.expected)}</span>
-                </div>
-            `
-                : ""
-            }
+            <div class="test-case-row" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+                <span class="test-case-label" style="font-size: 0.8rem;">Expected Output:</span>
+                <textarea class="test-case-input" onchange="updateTestCase(${i}, 'expected', null, this.value)">${escapeHtml(tc.expected || "")}</textarea>
+            </div>
         </div>
     `,
     )
@@ -1157,4 +1154,106 @@ function redoFromHistory(slug) {
     `https://leetcode.com/problems/${slug}/`;
   toggleHistory();
   fetchProblem(); // loads with original template (blank canvas)
+}
+
+// --- Custom Problem & Editable Test Cases ---
+
+function openCustomModal() {
+  document.getElementById("customProblemModal").classList.add("active");
+  document.getElementById("customTitle").focus();
+}
+
+function closeCustomModal() {
+  document.getElementById("customProblemModal").classList.remove("active");
+  document.getElementById("customError").textContent = "";
+}
+
+function submitCustomProblem() {
+  const titleInput = document.getElementById("customTitle").value.trim() || "Custom Problem";
+  const methodInput = document.getElementById("customMethod").value.trim() || "solve";
+  const paramsInput = document.getElementById("customParams").value.trim() || "param1";
+  
+  // Parse params
+  const params = paramsInput.split(',').map(p => p.trim()).filter(p => p);
+
+  // Construct faux currentProblem
+  currentProblem = {
+    titleSlug: titleInput.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now(),
+    questionId: "Custom",
+    title: titleInput,
+    difficulty: "Medium",
+    content: `<p>This is a custom problem. You can write your own solution and define custom test cases below.</p>`,
+    metaData: JSON.stringify({
+      name: methodInput,
+      params: params.map(p => ({ name: p, type: "Any" })),
+      return: { type: "Any" }
+    })
+  };
+
+  testCases = [];
+
+  // Construct Python Template
+  let pyTemplate = `class Solution:\n    def ${methodInput}(self, ${params.join(', ')}):\n        pass\n`;
+  currentProblem.codeSnippets = [{ langSlug: 'python3', code: pyTemplate }];
+
+  // Render
+  renderProblem(currentProblem);
+  renderTestCases();
+  setupEditor(currentProblem);
+
+  document.getElementById("mainContent").style.display = "block";
+  closeCustomModal();
+  
+  // Clear inputs
+  document.getElementById("customTitle").value = "";
+  document.getElementById("customMethod").value = "";
+  document.getElementById("customParams").value = "";
+  
+  // Switch to Testcases tab to encourage adding tests
+  switchTab("testcases");
+}
+
+function updateTestCase(index, type, key, value) {
+  if (type === 'input') {
+    testCases[index].inputs[key] = value;
+  } else if (type === 'expected') {
+    testCases[index].expected = value;
+  }
+}
+
+function addNewTestCase() {
+  if (!currentProblem) {
+    alert("Please load or create a problem first.");
+    return;
+  }
+
+  let metaData = {};
+  try {
+    metaData = JSON.parse(currentProblem.metaData || "{}");
+  } catch(e) {}
+
+  const params = metaData.params || [];
+  
+  const newInputs = {};
+  for (const p of params) {
+    const pName = p.name || `param${Object.keys(newInputs).length}`;
+    newInputs[pName] = "";
+  }
+
+  // If there are no params parsed, just add a generic generic input
+  if (Object.keys(newInputs).length === 0) {
+    newInputs["input"] = "";
+  }
+
+  testCases.push({
+    inputs: newInputs,
+    expected: ""
+  });
+
+  renderTestCases();
+}
+
+function removeTestCase(index) {
+  testCases.splice(index, 1);
+  renderTestCases();
 }
