@@ -1299,10 +1299,24 @@ body {
   color: var(--text-primary);
 }
 
-.history-description code {
-  font-family: var(--font-mono);
-  font-size: 0.82em;
-  color: var(--accent);
+.history-description-textarea {
+  width: 100%;
+  min-height: 150px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+  transition: border-color var(--transition);
+}
+
+.history-description-textarea:focus {
+  border-color: var(--accent);
 }
 
 /* --- Favorites Toggle (Header) --- */

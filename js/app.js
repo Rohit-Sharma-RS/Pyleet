@@ -1027,16 +1027,21 @@ function viewHistoryDetail(slug) {
                 </div>
             </div>
 
-            ${
-              item.description
-                ? `
             <div class="history-detail-section">
-                <h4 class="history-section-label">📄 Problem Description</h4>
-                <div class="history-description">${item.description}</div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h4 class="history-section-label" style="margin-bottom:0;">📄 Problem Description</h4>
+                    <button class="history-action-btn view-btn" id="editDescBtn" onclick="editHistoryDescription('${item.slug}')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        Edit
+                    </button>
+                    <button class="history-action-btn run-btn" id="saveDescBtn" onclick="saveHistoryDescription('${item.slug}')" style="display:none; color:#111;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        Save
+                    </button>
+                </div>
+                <div class="history-description" id="descDisplay">${item.description || "No description provided."}</div>
+                <textarea class="history-description-textarea" id="descEdit" style="display:none;">${item.description || ""}</textarea>
             </div>
-            `
-                : ""
-            }
 
             <div class="history-detail-section">
                 <a href="${item.url}" target="_blank" rel="noopener" class="history-action-btn load-btn" style="text-decoration:none;text-align:center;display:inline-flex;">
@@ -1044,6 +1049,30 @@ function viewHistoryDetail(slug) {
                 </a>
             </div>
         </div>`;
+}
+
+function editHistoryDescription(slug) {
+  document.getElementById("descDisplay").style.display = "none";
+  const editArea = document.getElementById("descEdit");
+  editArea.style.display = "block";
+  editArea.focus();
+  document.getElementById("editDescBtn").style.display = "none";
+  document.getElementById("saveDescBtn").style.display = "inline-flex";
+}
+
+function saveHistoryDescription(slug) {
+  const newDesc = document.getElementById("descEdit").value;
+  const history = getHistory();
+  const existingIdx = history.findIndex((h) => h.slug === slug);
+  
+  if (existingIdx >= 0) {
+    history[existingIdx].description = newDesc;
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    debouncedSync(); // Sync to cloud
+    
+    // Refresh the view
+    viewHistoryDetail(slug);
+  }
 }
 
 function backToHistoryList() {
