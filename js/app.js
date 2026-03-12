@@ -223,6 +223,53 @@ function renderProblem(problem) {
   content = content.replace(/<p>&nbsp;<\/p>/g, "");
 
   descEl.innerHTML = content;
+
+  // Show the edit button
+  const editDescBtn = document.getElementById("editActiveDescBtn");
+  const saveDescBtn = document.getElementById("saveActiveDescBtn");
+  const descEditArea = document.getElementById("problemDescriptionEdit");
+
+  if (editDescBtn && saveDescBtn && descEditArea) {
+    editDescBtn.style.display = "inline-flex";
+    saveDescBtn.style.display = "none";
+    descEl.style.display = "block";
+    descEditArea.style.display = "none";
+  }
+}
+
+function editActiveDescription() {
+  if (!currentProblem) return;
+  const descEl = document.getElementById("problemDescription");
+  const editArea = document.getElementById("problemDescriptionEdit");
+  
+  descEl.style.display = "none";
+  editArea.value = currentProblem.content || "";
+  editArea.style.display = "block";
+  editArea.focus();
+  
+  document.getElementById("editActiveDescBtn").style.display = "none";
+  document.getElementById("saveActiveDescBtn").style.display = "inline-flex";
+}
+
+function saveActiveDescription() {
+  if (!currentProblem) return;
+  const editArea = document.getElementById("problemDescriptionEdit");
+  const newDesc = editArea.value;
+  
+  currentProblem.content = newDesc;
+  
+  // Update the display
+  renderProblem(currentProblem);
+  
+  // Update history if this problem is already in history
+  const history = getHistory();
+  const existingIdx = history.findIndex((h) => h.slug === currentProblem.titleSlug);
+  if (existingIdx >= 0) {
+    history[existingIdx].description = newDesc;
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    if (typeof debouncedSync === 'function') debouncedSync();
+    loadHistory();
+  }
 }
 
 // --- Parse Test Cases ---
@@ -789,10 +836,13 @@ function saveToHistory(allPassed, passCount, totalTests) {
     totalTests,
     lastAttempt: new Date().toISOString(),
     attempts: 1,
-    url: `https://leetcode.com/problems/${slug}/`,
+    url: currentProblem.questionId === "Custom" ? "" : `https://leetcode.com/problems/${slug}/`,
     code: userCode,
     description: currentProblem.content || "",
     favorite: false,
+    isCustom: currentProblem.questionId === "Custom",
+    metaData: currentProblem.metaData,
+    testCases: currentProblem.questionId === "Custom" ? testCases : undefined
   };
 
   if (existingIdx >= 0) {
@@ -1124,17 +1174,59 @@ function getTimeAgo(date) {
 function loadFromHistory(slug) {
   const history = getHistory();
   const item = history.find((h) => h.slug === slug);
+  if (!item) return;
 
-  document.getElementById("urlInput").value =
-    `https://leetcode.com/problems/${slug}/`;
-  toggleHistory();
-
-  // Fetch the problem first, then load saved code
-  fetchProblem().then(() => {
-    if (item && item.code) {
+  if (item.isCustom || item.questionId === "Custom") {
+    document.getElementById("urlInput").value = "Custom Problem: " + item.title;
+    toggleHistory();
+    
+    // Reconstruct custom problem
+    currentProblem = {
+      titleSlug: item.slug,
+      questionId: "Custom",
+      title: item.title,
+      difficulty: item.difficulty,
+      content: item.description,
+      metaData: item.metaData || "{}"
+    };
+    
+    if (item.testCases) {
+      testCases = [...item.testCases];
+    } else {
+      testCases = [];
+    }
+    
+    renderProblem(currentProblem);
+    renderTestCases();
+    
+    let pyTemplate = "";
+    try {
+      const meta = JSON.parse(currentProblem.metaData);
+      const params = meta.params ? meta.params.map(p => p.name).join(', ') : "";
+      const methodName = meta.name || "solve";
+      pyTemplate = `class Solution:\n    def ${methodName}(self, ${params}):\n        pass\n`;
+    } catch(e) {}
+    
+    currentProblem.codeSnippets = [{ langSlug: 'python3', code: pyTemplate }];
+    
+    setupEditor(currentProblem);
+    if (item.code) {
       editor.setValue(item.code);
     }
-  });
+    document.getElementById("mainContent").style.display = "block";
+    
+  } else {
+    document.getElementById("urlInput").value =
+      `https://leetcode.com/problems/${slug}/`;
+    toggleHistory();
+
+    // Fetch the problem first, then load saved code
+    fetchProblem().then(() => {
+      if (item && item.code) {
+        editor.setValue(item.code);
+      }
+    });
+  }
 }
 
 function toggleHistory() {
@@ -1203,14 +1295,51 @@ function redoFromHistory(slug) {
     item.status = "attempted";
     item.passCount = 0;
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-    debouncedSync(); // Sync to cloud
+    if (typeof debouncedSync === 'function') debouncedSync(); // Sync to cloud
   }
 
-  // Load the problem fresh
-  document.getElementById("urlInput").value =
-    `https://leetcode.com/problems/${slug}/`;
-  toggleHistory();
-  fetchProblem(); // loads with original template (blank canvas)
+  if (item && (item.isCustom || item.questionId === "Custom")) {
+    document.getElementById("urlInput").value = "Custom Problem: " + item.title;
+    toggleHistory();
+    
+    // Reconstruct custom problem
+    currentProblem = {
+      titleSlug: item.slug,
+      questionId: "Custom",
+      title: item.title,
+      difficulty: item.difficulty,
+      content: item.description,
+      metaData: item.metaData || "{}"
+    };
+    
+    if (item.testCases) {
+      testCases = [...item.testCases];
+    } else {
+      testCases = [];
+    }
+    
+    renderProblem(currentProblem);
+    renderTestCases();
+    
+    let pyTemplate = "";
+    try {
+      const meta = JSON.parse(currentProblem.metaData);
+      const params = meta.params ? meta.params.map(p => p.name).join(', ') : "";
+      const methodName = meta.name || "solve";
+      pyTemplate = `class Solution:\n    def ${methodName}(self, ${params}):\n        pass\n`;
+    } catch(e) {}
+    
+    currentProblem.codeSnippets = [{ langSlug: 'python3', code: pyTemplate }];
+    
+    setupEditor(currentProblem);
+    document.getElementById("mainContent").style.display = "block";
+  } else {
+    // Load the problem fresh
+    document.getElementById("urlInput").value =
+      `https://leetcode.com/problems/${slug}/`;
+    toggleHistory();
+    fetchProblem(); // loads with original template (blank canvas)
+  }
 }
 
 // --- Custom Problem & Editable Test Cases ---

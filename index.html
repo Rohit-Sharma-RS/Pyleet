@@ -215,7 +215,18 @@
           </div>
           <div class="panel-body">
             <div id="descriptionTab" class="tab-content active">
+              <div class="description-header" style="display:flex; justify-content:flex-end; margin-bottom: 10px;">
+                <button class="action-btn" id="editActiveDescBtn" onclick="editActiveDescription()" style="display:none;" title="Edit Description">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                  <span>Edit</span>
+                </button>
+                <button class="action-btn run-btn" id="saveActiveDescBtn" onclick="saveActiveDescription()" style="display:none; margin-left:8px;" title="Save Description">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  <span>Save</span>
+                </button>
+              </div>
               <div id="problemDescription" class="problem-description"></div>
+              <textarea id="problemDescriptionEdit" class="history-description-textarea" style="display:none; width:100%; min-height:300px; margin-top:10px;"></textarea>
             </div>
             <div id="testcasesTab" class="tab-content">
               <div class="test-cases-toolbar">
