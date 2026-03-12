@@ -901,16 +901,44 @@ function loadHistory() {
     return;
   }
 
+  let currentGroupDate = null;
+  const getGroupDateString = (dateObj) => {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (dateObj.toDateString() === today.toDateString()) {
+      return "Today";
+    } else if (dateObj.toDateString() === yesterday.toDateString()) {
+      return "Yesterday";
+    } else {
+      return dateObj.toLocaleDateString(undefined, {
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric'
+      });
+    }
+  };
+
   listEl.innerHTML =
     filterHTML +
     sorted
       .map((item) => {
         const date = new Date(item.lastAttempt);
+        const groupDateStr = getGroupDateString(date);
+        let headerHtml = "";
+
+        if (groupDateStr !== currentGroupDate) {
+          headerHtml = `<div class="history-date-header">${groupDateStr}</div>`;
+          currentGroupDate = groupDateStr;
+        }
+
         const timeAgo = getTimeAgo(date);
         const diffClass = item.difficulty.toLowerCase();
         const isFav = item.favorite;
 
         return `
+            ${headerHtml}
             <div class="history-item">
                 <div class="history-item-title">
                     <button class="favorite-star ${isFav ? "active" : ""}" onclick="event.stopPropagation(); toggleFavorite('${item.slug}')" title="${isFav ? "Remove from favorites" : "Add to favorites"}">
