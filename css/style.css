@@ -546,6 +546,78 @@ body {
   word-break: break-all;
 }
 
+/* --- Insights Tab --- */
+.insights-header {
+  margin-bottom: 20px;
+}
+
+.insights-header h3 {
+  font-size: 1.1rem;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.insights-header p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.insights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.insight-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  transition: all var(--transition);
+}
+
+.insight-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-glow);
+}
+
+.insight-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.insight-line {
+  font-size: 0.82rem;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-primary);
+  background: rgba(255, 161, 22, 0.15);
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.insight-line:hover {
+  background: var(--accent);
+  color: #000;
+}
+
+.insight-date {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.insight-text {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}
+
 /* --- Editor Panel --- */
 .editor-panel {
   display: flex;
@@ -657,6 +729,30 @@ body {
 
 .editor-container .CodeMirror .CodeMirror-selected {
   background: rgba(255, 161, 22, 0.12) !important;
+}
+
+/* --- Golden Gutter & Highlight --- */
+.golden-gutter {
+  width: 24px;
+  cursor: pointer;
+}
+
+.golden-marker {
+  color: var(--accent);
+  font-size: 14px;
+  line-height: 1.3em;
+  text-align: center;
+  cursor: pointer;
+  filter: drop-shadow(0 0 4px var(--accent-glow));
+  transition: transform 0.2s;
+}
+
+.golden-marker:hover {
+  transform: scale(1.2);
+}
+
+.golden-line-highlight {
+  background: linear-gradient(90deg, rgba(255, 161, 22, 0.15) 0%, transparent 100%) !important;
 }
 
 /* --- Results Panel --- */
@@ -1050,14 +1146,21 @@ body {
 }
 
 .history-date-header {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--text-tertiary);
-  margin: 16px 0 8px;
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--accent);
+  margin: 22px 0 10px;
+  padding: 6px 10px 8px;
+  border-bottom: 3px solid var(--accent);
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 1px;
+  background: linear-gradient(90deg, rgba(255, 161, 22, 0.1) 0%, transparent 100%);
+  border-radius: 4px 4px 0 0;
+  text-shadow: 0 0 12px rgba(255, 161, 22, 0.3);
+}
+
+.history-date-header:first-of-type {
+  margin-top: 8px;
 }
 
 .history-item {

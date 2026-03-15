@@ -9,6 +9,7 @@ let pyodideReady = false;
 let currentProblem = null;
 let testCases = [];
 let originalCode = "";
+let currentGoldenNotes = {}; // lineIndex -> { text, timestamp }
 
 // --- Initialize ---
 document.addEventListener("DOMContentLoaded", () => {
@@ -29,6 +30,7 @@ function initEditor() {
     mode: "python",
     theme: "dracula",
     lineNumbers: true,
+    gutters: ["CodeMirror-linenumbers", "golden-gutter"],
     indentUnit: 4,
     tabSize: 4,
     indentWithTabs: false,
@@ -42,9 +44,17 @@ function initEditor() {
       "Ctrl-Enter": () => runCode(),
     },
   });
+  
   editor.setValue(
     "# Paste a LeetCode URL above and click Fetch to get started!\n",
   );
+
+  // Handle Golden Gutter Clicks
+  editor.on("gutterClick", (cm, line, gutter) => {
+    if (gutter === "golden-gutter" || gutter === "CodeMirror-linenumbers") {
+      openGoldenNoteModal(line);
+    }
+  });
 }
 
 // --- Pyodide Loading ---
@@ -185,9 +195,21 @@ async function fetchProblem() {
     const data = await fetchProblemFromAPI(slug);
 
     currentProblem = data;
+    currentGoldenNotes = {}; // New problem, clear notes until loaded
+    
+    // Check if we have history for this to load existing notes
+    const history = getHistory();
+    const existing = history.find(h => h.slug === currentProblem.titleSlug);
+    if (existing && existing.goldenNotes) {
+      currentGoldenNotes = existing.goldenNotes;
+    }
+
     renderProblem(data);
     setupTestCases(data);
     setupEditor(data);
+    
+    renderGoldenGutters();
+    renderInsightsTab();
 
     document.getElementById("mainContent").style.display = "block";
     hideLoading();
@@ -260,6 +282,12 @@ function saveActiveDescription() {
   
   // Update the display
   renderProblem(currentProblem);
+  
+  // For custom problems, use the dedicated save function
+  if (currentProblem.questionId === "Custom") {
+    saveCustomProblemToHistory();
+    return;
+  }
   
   // Update history if this problem is already in history
   const history = getHistory();
@@ -406,6 +434,9 @@ function setupEditor(problem) {
 
   editor.setValue(originalCode);
   editor.refresh();
+  
+  renderGoldenGutters();
+  renderInsightsTab();
 
   // Focus editor on desktop
   if (window.innerWidth > 900) {
@@ -842,7 +873,8 @@ function saveToHistory(allPassed, passCount, totalTests) {
     favorite: false,
     isCustom: currentProblem.questionId === "Custom",
     metaData: currentProblem.metaData,
-    testCases: currentProblem.questionId === "Custom" ? testCases : undefined
+    testCases: currentProblem.questionId === "Custom" ? testCases : undefined,
+    goldenNotes: currentGoldenNotes
   };
 
   if (existingIdx >= 0) {
@@ -996,6 +1028,7 @@ function loadHistory() {
                     </button>
                     <span>${item.questionId}. ${escapeHtml(item.title)}</span>
                     <span class="difficulty-badge ${diffClass}" style="font-size:0.65rem;padding:1px 6px;">${item.difficulty}</span>
+                    ${item.goldenNotes && Object.keys(item.goldenNotes).length > 0 ? '<span class="history-item-golden-badge" title="Has Golden Insights">✨</span>' : ''}
                 </div>
                 <div class="history-item-meta">
                     <span class="history-status ${item.status}">
@@ -1213,7 +1246,11 @@ function loadFromHistory(slug) {
     if (item.code) {
       editor.setValue(item.code);
     }
+    renderGoldenGutters();
+    renderInsightsTab();
+    
     document.getElementById("mainContent").style.display = "block";
+    setupCustomCodeAutoSave();
     
   } else {
     document.getElementById("urlInput").value =
@@ -1225,6 +1262,9 @@ function loadFromHistory(slug) {
       if (item && item.code) {
         editor.setValue(item.code);
       }
+      currentGoldenNotes = item.goldenNotes || {};
+      renderGoldenGutters();
+      renderInsightsTab();
     });
   }
 }
@@ -1332,7 +1372,10 @@ function redoFromHistory(slug) {
     currentProblem.codeSnippets = [{ langSlug: 'python3', code: pyTemplate }];
     
     setupEditor(currentProblem);
+    renderGoldenGutters();
+    renderInsightsTab();
     document.getElementById("mainContent").style.display = "block";
+    setupCustomCodeAutoSave();
   } else {
     // Load the problem fresh
     document.getElementById("urlInput").value =
@@ -1343,6 +1386,59 @@ function redoFromHistory(slug) {
 }
 
 // --- Custom Problem & Editable Test Cases ---
+
+// Debounced auto-save for custom problem code edits
+let customCodeSaveTimeout = null;
+
+function saveCustomProblemToHistory() {
+  if (!currentProblem || currentProblem.questionId !== "Custom") return;
+
+  const history = getHistory();
+  const slug = currentProblem.titleSlug;
+  const userCode = editor ? editor.getValue() : "";
+
+  const existingIdx = history.findIndex((h) => h.slug === slug);
+
+  const entry = {
+    slug,
+    title: currentProblem.title,
+    questionId: "Custom",
+    difficulty: currentProblem.difficulty,
+    status: existingIdx >= 0 ? (history[existingIdx].status || "attempted") : "attempted",
+    passCount: existingIdx >= 0 ? (history[existingIdx].passCount || 0) : 0,
+    totalTests: testCases.length,
+    lastAttempt: new Date().toISOString(),
+    attempts: existingIdx >= 0 ? (history[existingIdx].attempts || 0) : 0,
+    url: "",
+    code: userCode,
+    description: currentProblem.content || "",
+    favorite: existingIdx >= 0 ? (history[existingIdx].favorite || false) : false,
+    isCustom: true,
+    metaData: currentProblem.metaData,
+    testCases: JSON.parse(JSON.stringify(testCases)),
+    goldenNotes: currentGoldenNotes
+  };
+
+  if (existingIdx >= 0) {
+    history[existingIdx] = entry;
+  } else {
+    history.unshift(entry);
+  }
+
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  if (typeof debouncedSync === 'function') debouncedSync();
+}
+
+function setupCustomCodeAutoSave() {
+  if (!editor) return;
+  editor.on("change", () => {
+    if (!currentProblem || currentProblem.questionId !== "Custom") return;
+    if (customCodeSaveTimeout) clearTimeout(customCodeSaveTimeout);
+    customCodeSaveTimeout = setTimeout(() => {
+      saveCustomProblemToHistory();
+    }, 1500);
+  });
+}
 
 function openCustomModal() {
   document.getElementById("customProblemModal").classList.add("active");
@@ -1377,6 +1473,7 @@ function submitCustomProblem() {
   };
 
   testCases = [];
+  currentGoldenNotes = {};
 
   // Construct Python Template
   let pyTemplate = `class Solution:\n    def ${methodInput}(self, ${params.join(', ')}):\n        pass\n`;
@@ -1395,6 +1492,12 @@ function submitCustomProblem() {
   document.getElementById("customMethod").value = "";
   document.getElementById("customParams").value = "";
   
+  // Save immediately so the problem persists before running tests
+  saveCustomProblemToHistory();
+  
+  // Setup auto-save for code edits
+  setupCustomCodeAutoSave();
+  
   // Switch to Testcases tab to encourage adding tests
   switchTab("testcases");
 }
@@ -1405,6 +1508,7 @@ function updateTestCase(index, type, key, value) {
   } else if (type === 'expected') {
     testCases[index].expected = value;
   }
+  saveCustomProblemToHistory();
 }
 
 function addNewTestCase() {
@@ -1437,9 +1541,161 @@ function addNewTestCase() {
   });
 
   renderTestCases();
+  saveCustomProblemToHistory();
 }
 
 function removeTestCase(index) {
   testCases.splice(index, 1);
   renderTestCases();
+  saveCustomProblemToHistory();
+}
+
+// --- Golden Notes ---
+
+let activeNoteLine = null;
+
+function openGoldenNoteModal(lineIndex) {
+  if (!currentProblem) return;
+  activeNoteLine = lineIndex;
+  
+  const modal = document.getElementById("goldenNoteModal");
+  const subtitle = document.getElementById("goldenNoteSubtitle");
+  const textInput = document.getElementById("goldenNoteText");
+  const deleteBtn = document.getElementById("deleteGoldenNoteBtn");
+  
+  subtitle.textContent = `Line ${lineIndex + 1}`;
+  
+  if (currentGoldenNotes[lineIndex]) {
+    textInput.value = currentGoldenNotes[lineIndex].text;
+    deleteBtn.style.display = "block";
+  } else {
+    textInput.value = "";
+    deleteBtn.style.display = "none";
+  }
+  
+  modal.classList.add("active");
+  textInput.focus();
+}
+
+function closeGoldenNoteModal() {
+  document.getElementById("goldenNoteModal").classList.remove("active");
+  activeNoteLine = null;
+}
+
+function saveGoldenNoteFromModal() {
+  if (activeNoteLine === null) return;
+  
+  const text = document.getElementById("goldenNoteText").value.trim();
+  if (text) {
+    currentGoldenNotes[activeNoteLine] = {
+      text: text,
+      timestamp: new Date().toISOString()
+    };
+  } else {
+    delete currentGoldenNotes[activeNoteLine];
+  }
+  
+  finishGoldenNoteEdit();
+}
+
+function deleteGoldenNoteFromModal() {
+  if (activeNoteLine === null) return;
+  delete currentGoldenNotes[activeNoteLine];
+  finishGoldenNoteEdit();
+}
+
+function finishGoldenNoteEdit() {
+  closeGoldenNoteModal();
+  renderGoldenGutters();
+  renderInsightsTab();
+  
+  // Persist
+  if (currentProblem.questionId === "Custom") {
+    saveCustomProblemToHistory();
+  } else {
+    // For standard problems, only save if it's already in history
+    // (or we can just force save right now so insights aren't lost)
+    const history = getHistory();
+    const existingIdx = history.findIndex((h) => h.slug === currentProblem.titleSlug);
+    if (existingIdx >= 0) {
+      history[existingIdx].goldenNotes = currentGoldenNotes;
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+      if (typeof debouncedSync === 'function') debouncedSync();
+      loadHistory();
+    } else {
+      // Create a dummy attempt entry to hold the notes
+      saveToHistory(false, 0, testCases.length);
+    }
+  }
+}
+
+function renderGoldenGutters() {
+  if (!editor) return;
+  
+  // Clear existing
+  editor.clearGutter("golden-gutter");
+  for (let i = 0; i < editor.lineCount(); i++) {
+    editor.removeLineClass(i, "background", "golden-line-highlight");
+  }
+  
+  // Add new
+  for (const [lineIdxStr, noteData] of Object.entries(currentGoldenNotes)) {
+    const lineIdx = parseInt(lineIdxStr, 10);
+    
+    if (lineIdx < editor.lineCount()) {
+      // Add marker
+      const marker = document.createElement("div");
+      marker.className = "golden-marker";
+      marker.innerHTML = "✨";
+      marker.title = noteData.text;
+      
+      editor.setGutterMarker(lineIdx, "golden-gutter", marker);
+      
+      // Add highlight class
+      editor.addLineClass(lineIdx, "background", "golden-line-highlight");
+    }
+  }
+}
+
+function renderInsightsTab() {
+  const container = document.getElementById("insightsList");
+  if (!container) return;
+  
+  const noteEntries = Object.entries(currentGoldenNotes);
+  
+  if (noteEntries.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">✨</div>
+        <p class="empty-state-text">No insights added yet.<br>Click an editor line to add one!</p>
+      </div>`;
+    return;
+  }
+  
+  // Sort by line number
+  noteEntries.sort((a, b) => parseInt(a[0]) - parseInt(b[0]));
+  
+  container.innerHTML = noteEntries.map(([lineStr, note]) => {
+    const lineNum = parseInt(lineStr, 10) + 1;
+    const date = new Date(note.timestamp);
+    const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    
+    return `
+      <div class="insight-card">
+        <div class="insight-header">
+          <div class="insight-line" onclick="scrollToEditorLine(${lineStr})" title="Click to view in editor">Line ${lineNum} ↵</div>
+          <div class="insight-date">${dateStr}</div>
+        </div>
+        <div class="insight-text">${escapeHtml(note.text)}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function scrollToEditorLine(lineIdx) {
+  if (!editor) return;
+  // Make sure we switch to the editor space if on mobile not viewing it
+  editor.scrollIntoView({ line: lineIdx, ch: 0 }, 100);
+  editor.setCursor({ line: lineIdx, ch: 0 });
+  editor.focus();
 }

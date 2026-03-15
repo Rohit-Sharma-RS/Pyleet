@@ -210,6 +210,12 @@
                 onclick="switchTab('testcases')"
               >
                 Test Cases
+              <button
+                class="tab-btn"
+                data-tab="insights"
+                onclick="switchTab('insights')"
+              >
+                Insights ✨
               </button>
             </div>
           </div>
@@ -239,6 +245,18 @@
                 </button>
               </div>
               <div id="testCasesList" class="test-cases-list"></div>
+            </div>
+            <div id="insightsTab" class="tab-content">
+              <div class="insights-header">
+                <h3>Golden Insights</h3>
+                <p>Click the <b>gutter</b> next to any line number in the editor to add a note about tricky lines or concepts you found hard.</p>
+              </div>
+              <div id="insightsList" class="insights-list">
+                <div class="empty-state">
+                  <div class="empty-state-icon">✨</div>
+                  <p class="empty-state-text">No insights added yet.<br>Click an editor line to add one!</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -387,6 +405,29 @@
           </div>
           <div class="auth-error" id="customError"></div>
           <button class="auth-submit-btn" onclick="submitCustomProblem()">Create Problem</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Golden Note Modal -->
+    <div class="auth-modal-overlay" id="goldenNoteModal">
+      <div class="auth-modal">
+        <button class="auth-modal-close" onclick="closeGoldenNoteModal()">✕</button>
+        <h2 class="auth-modal-title">✨ Add Golden Insight</h2>
+        <p class="auth-modal-subtitle" id="goldenNoteSubtitle">Line --</p>
+        <div class="auth-modal-form">
+          <div class="auth-input-group">
+            <textarea
+              id="goldenNoteText"
+              class="history-description-textarea"
+              placeholder="What makes this line tricky? What concept did you find hard here?"
+              style="min-height: 120px;"
+            ></textarea>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button class="auth-submit-btn" onclick="saveGoldenNoteFromModal()" style="flex:2;">Save Insight</button>
+            <button class="auth-submit-btn" id="deleteGoldenNoteBtn" onclick="deleteGoldenNoteFromModal()" style="flex:1; background:var(--bg-surface); color:var(--error); border:1px solid var(--error-bg); display:none;">Delete</button>
+          </div>
         </div>
       </div>
     </div>
